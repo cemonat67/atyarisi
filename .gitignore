@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+data/
+*.db
+*.sqlite
+.DS_Store
+venv/
+.venv/
+scraper.log
+discovered_cities.json

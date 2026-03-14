@@ -1,0 +1,1828 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GALOP — At Yarışı Analiz Sistemi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #080a0e;
+  --bg2:       #0d1017;
+  --bg3:       #121620;
+  --card:      #141923;
+  --border:    #1e2535;
+  --border2:   #253048;
+  --gold:      #c9a84c;
+  --gold2:     #e8c97a;
+  --gold3:     #f5e2a8;
+  --red:       #e05252;
+  --green:     #3fc88a;
+  --blue:      #4a9eff;
+  --purple:    #8b6fff;
+  --text:      #e8ecf4;
+  --text2:     #8a95ab;
+  --text3:     #545f75;
+  --mono:      'DM Mono', monospace;
+  --display:   'Bebas Neue', sans-serif;
+  --serif:     'Playfair Display', serif;
+  --sans:      'DM Sans', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── NOISE TEXTURE ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0;
+}
+
+/* ── LAYOUT ── */
+.app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; position: relative; z-index: 1; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  padding: 0;
+  position: sticky; top: 0; height: 100vh;
+  overflow-y: auto;
+}
+
+.sidebar-logo {
+  padding: 28px 24px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo-word {
+  font-family: var(--display);
+  font-size: 36px;
+  letter-spacing: 4px;
+  color: var(--gold2);
+  line-height: 1;
+}
+
+.logo-sub {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.sidebar-section {
+  padding: 20px 16px 8px;
+}
+
+.sidebar-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--text3);
+  text-transform: uppercase;
+  padding: 0 8px;
+  margin-bottom: 8px;
+}
+
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .15s ease;
+  margin-bottom: 2px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text2);
+}
+
+.nav-item:hover { background: var(--bg3); color: var(--text); }
+.nav-item.active { background: rgba(201,168,76,.1); color: var(--gold2); }
+.nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+
+.sidebar-divider { height: 1px; background: var(--border); margin: 12px 16px; }
+
+.today-card {
+  margin: 12px 16px;
+  background: linear-gradient(135deg, rgba(201,168,76,.15), rgba(201,168,76,.05));
+  border: 1px solid rgba(201,168,76,.2);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.today-label { font-family: var(--mono); font-size: 9px; letter-spacing: 2px; color: var(--gold); text-transform: uppercase; }
+.today-date  { font-family: var(--serif); font-size: 18px; color: var(--gold2); margin-top: 4px; }
+.today-races { font-size: 12px; color: var(--text2); margin-top: 4px; }
+
+.city-list { padding: 8px 16px; flex: 1; }
+
+.city-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .15s;
+  margin-bottom: 2px;
+}
+.city-item:hover { background: var(--bg3); }
+.city-item.active { background: rgba(74,158,255,.1); }
+.city-name { font-size: 13px; font-weight: 500; }
+.city-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.city-item.active .city-badge { background: rgba(74,158,255,.2); border-color: var(--blue); color: var(--blue); }
+
+/* ── MAIN ── */
+.main { display: flex; flex-direction: column; min-height: 100vh; }
+
+/* ── TOPBAR ── */
+.topbar {
+  background: rgba(8,10,14,.8);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  height: 60px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+}
+
+.topbar-left { display: flex; align-items: center; gap: 16px; }
+.breadcrumb { font-family: var(--mono); font-size: 12px; color: var(--text3); }
+.breadcrumb span { color: var(--gold); }
+
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+
+.live-badge {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(63,200,138,.1);
+  border: 1px solid rgba(63,200,138,.3);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--green);
+}
+
+.live-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .5; transform: scale(.8); }
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  background: var(--bg3);
+  color: var(--text2);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn:hover { border-color: var(--gold); color: var(--gold); }
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--gold), #a07820);
+  border-color: var(--gold);
+  color: #080a0e;
+  font-weight: 700;
+}
+.btn-primary:hover { background: linear-gradient(135deg, var(--gold2), var(--gold)); color: #080a0e; }
+
+/* ── CONTENT ── */
+.content { padding: 28px; flex: 1; }
+
+/* ── STATS ROW ── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  animation: fadeUp .4s ease both;
+}
+.stat-card:nth-child(1) { animation-delay: .05s; }
+.stat-card:nth-child(2) { animation-delay: .10s; }
+.stat-card:nth-child(3) { animation-delay: .15s; }
+.stat-card:nth-child(4) { animation-delay: .20s; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+.stat-card.gold::before  { background: linear-gradient(90deg, var(--gold), transparent); }
+.stat-card.green::before { background: linear-gradient(90deg, var(--green), transparent); }
+.stat-card.blue::before  { background: linear-gradient(90deg, var(--blue), transparent); }
+.stat-card.red::before   { background: linear-gradient(90deg, var(--red), transparent); }
+
+.stat-label { font-family: var(--mono); font-size: 10px; letter-spacing: 2px; color: var(--text3); text-transform: uppercase; }
+.stat-val   { font-family: var(--display); font-size: 42px; letter-spacing: 2px; line-height: 1.1; margin-top: 8px; }
+.stat-card.gold  .stat-val { color: var(--gold2); }
+.stat-card.green .stat-val { color: var(--green); }
+.stat-card.blue  .stat-val { color: var(--blue); }
+.stat-card.red   .stat-val { color: var(--red); }
+.stat-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+.stat-change {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-family: var(--mono); font-size: 10px;
+  padding: 2px 6px; border-radius: 4px;
+  margin-top: 8px;
+}
+.stat-change.up   { background: rgba(63,200,138,.1); color: var(--green); }
+.stat-change.down { background: rgba(224,82,82,.1);  color: var(--red); }
+
+/* ── GRID ── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+
+/* ── PANEL ── */
+.panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  animation: fadeUp .5s ease both;
+}
+
+.panel-head {
+  padding: 18px 22px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.panel-title {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex; align-items: center; gap: 10px;
+}
+
+.panel-title .tag {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  background: rgba(201,168,76,.1);
+  color: var(--gold);
+  border: 1px solid rgba(201,168,76,.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.panel-body { padding: 20px 22px; }
+
+/* ── RACE LIST ── */
+.race-list { display: flex; flex-direction: column; gap: 10px; }
+
+.race-item {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: 40px 1fr auto auto auto;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: all .15s;
+  position: relative;
+  overflow: hidden;
+}
+
+.race-item::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--border2);
+  transition: background .15s;
+}
+.race-item:hover { border-color: var(--border2); transform: translateX(2px); }
+.race-item:hover::before { background: var(--gold); }
+.race-item.selected { border-color: rgba(201,168,76,.4); background: rgba(201,168,76,.05); }
+.race-item.selected::before { background: var(--gold); }
+
+.race-no {
+  font-family: var(--display);
+  font-size: 28px;
+  color: var(--text3);
+  line-height: 1;
+  text-align: center;
+}
+.race-item.selected .race-no,
+.race-item:hover .race-no { color: var(--gold); }
+
+.race-info {}
+.race-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.race-meta { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 3px; display: flex; gap: 8px; }
+.race-meta span { display: flex; align-items: center; gap: 3px; }
+
+.race-time { font-family: var(--mono); font-size: 13px; color: var(--text2); }
+
+.race-status {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+.race-status.upcoming { background: rgba(74,158,255,.1); color: var(--blue); border: 1px solid rgba(74,158,255,.2); }
+.race-status.running  { background: rgba(63,200,138,.1); color: var(--green); border: 1px solid rgba(63,200,138,.3); animation: pulse 1.5s infinite; }
+.race-status.done     { background: rgba(255,255,255,.05); color: var(--text3); border: 1px solid var(--border); }
+
+.race-horses { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+
+/* ── HORSE TABLE ── */
+.horse-table { width: 100%; border-collapse: collapse; }
+
+.horse-table thead tr {
+  border-bottom: 1px solid var(--border);
+}
+
+.horse-table th {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--text3);
+  text-transform: uppercase;
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 400;
+}
+
+.horse-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background .12s;
+  cursor: pointer;
+}
+.horse-table tbody tr:hover { background: rgba(255,255,255,.03); }
+.horse-table tbody tr.highlight { background: rgba(201,168,76,.06); }
+
+.horse-table td { padding: 12px 14px; font-size: 12px; vertical-align: middle; }
+
+.horse-no {
+  font-family: var(--display);
+  font-size: 20px;
+  color: var(--text3);
+  width: 32px; height: 32px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.horse-name { font-weight: 600; font-size: 13px; color: var(--text); }
+.horse-detail { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: var(--mono); }
+
+.last6 { display: flex; gap: 3px; }
+.l6-dot {
+  width: 18px; height: 18px;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  display: flex; align-items: center; justify-content: center;
+}
+.l6-1 { background: rgba(201,168,76,.25); color: var(--gold2); }
+.l6-2 { background: rgba(63,200,138,.15); color: var(--green); }
+.l6-3 { background: rgba(74,158,255,.15); color: var(--blue); }
+.l6-x { background: rgba(255,255,255,.06); color: var(--text3); }
+.l6-f { background: rgba(224,82,82,.15); color: var(--red); }
+
+/* ── PREDICTION PANEL ── */
+.pred-panel {
+  background: linear-gradient(160deg, #0f1520 0%, #0a1018 100%);
+  border: 1px solid rgba(201,168,76,.25);
+  border-radius: 14px;
+  overflow: hidden;
+  animation: fadeUp .6s ease both;
+  animation-delay: .3s;
+}
+
+.pred-head {
+  background: linear-gradient(90deg, rgba(201,168,76,.15) 0%, transparent 100%);
+  padding: 18px 22px;
+  border-bottom: 1px solid rgba(201,168,76,.15);
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.pred-title {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--gold2);
+  display: flex; align-items: center; gap: 10px;
+}
+
+.pred-body { padding: 20px 22px; }
+
+.pred-list { display: flex; flex-direction: column; gap: 10px; }
+
+.pred-item {
+  display: grid;
+  grid-template-columns: 32px 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  transition: all .2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.pred-item::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--gold), transparent);
+  transition: width .3s ease;
+  width: 0;
+}
+
+.pred-item:hover::after,
+.pred-item.top::after { width: 100%; }
+
+.pred-rank {
+  font-family: var(--display);
+  font-size: 22px;
+  text-align: center;
+  line-height: 1;
+}
+.pred-rank.r1 { color: var(--gold2); }
+.pred-rank.r2 { color: var(--text2); }
+.pred-rank.r3 { color: #b87333; }
+
+.pred-name { font-size: 13px; font-weight: 700; color: var(--text); }
+.pred-reason { font-size: 11px; color: var(--text3); margin-top: 3px; font-family: var(--mono); }
+
+.prob-bar-wrap { width: 100px; }
+.prob-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text2);
+  text-align: right;
+  margin-bottom: 4px;
+}
+.prob-bar {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.prob-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--gold), var(--gold2));
+  transition: width 1s cubic-bezier(.16,1,.3,1);
+}
+.pred-item:nth-child(2) .prob-fill { background: linear-gradient(90deg, #888, #aaa); }
+.pred-item:nth-child(3) .prob-fill { background: linear-gradient(90deg, #b87333, #d4905a); }
+
+.pred-odds {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gold);
+  text-align: right;
+}
+
+/* ── SURPRISE BOX ── */
+.surprise-box {
+  margin-top: 16px;
+  background: linear-gradient(135deg, rgba(139,111,255,.1), rgba(139,111,255,.03));
+  border: 1px solid rgba(139,111,255,.25);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.surprise-header {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--purple);
+  text-transform: uppercase;
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 10px;
+}
+
+.surprise-horse { font-size: 15px; font-weight: 700; color: var(--text); }
+.surprise-odds  { font-family: var(--mono); font-size: 13px; color: var(--purple); }
+
+.surprise-reason {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.6;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(139,111,255,.15);
+}
+
+/* ── FORM CHART ── */
+.form-chart { display: flex; align-items: flex-end; gap: 4px; height: 60px; }
+.form-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.form-bar {
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  background: var(--border2);
+  transition: height .5s ease, background .3s;
+  min-height: 4px;
+}
+.form-bar.pos1 { background: linear-gradient(180deg, var(--gold2), var(--gold)); }
+.form-bar.pos2 { background: linear-gradient(180deg, #6cdb9f, var(--green)); }
+.form-bar.pos3 { background: linear-gradient(180deg, #7ab8ff, var(--blue)); }
+.form-bar.pos4 { background: var(--border2); }
+.form-bar-label { font-family: var(--mono); font-size: 9px; color: var(--text3); }
+
+/* ── MATH BADGE ── */
+.math-section { margin-top: 16px; }
+.math-title {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.math-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.math-chip {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: var(--bg3);
+  color: var(--text2);
+}
+.math-chip.active { border-color: rgba(201,168,76,.4); color: var(--gold); background: rgba(201,168,76,.08); }
+
+/* ── ODDS HEATMAP ── */
+.odds-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.odds-cell {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .15s;
+}
+.odds-cell:hover { border-color: var(--gold); transform: scale(1.03); }
+.odds-cell.hot { background: rgba(201,168,76,.12); border-color: rgba(201,168,76,.3); }
+.odds-horse { font-size: 11px; font-weight: 600; color: var(--text2); }
+.odds-val { font-family: var(--display); font-size: 22px; color: var(--gold2); margin-top: 2px; }
+.odds-cell.hot .odds-val { color: var(--gold2); }
+.odds-change { font-family: var(--mono); font-size: 9px; color: var(--text3); margin-top: 2px; }
+.odds-change.down { color: var(--red); }
+.odds-change.up   { color: var(--green); }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* ── SECTION TITLE ── */
+.section-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  display: flex; align-items: center; gap: 10px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ── ANALYSE LOADING ── */
+.analyse-btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, rgba(201,168,76,.2), rgba(201,168,76,.05));
+  border: 1px solid rgba(201,168,76,.35);
+  border-radius: 10px;
+  color: var(--gold2);
+  font-family: var(--display);
+  font-size: 18px;
+  letter-spacing: 3px;
+  cursor: pointer;
+  transition: all .2s;
+  margin-top: 8px;
+}
+.analyse-btn:hover {
+  background: linear-gradient(135deg, rgba(201,168,76,.3), rgba(201,168,76,.1));
+  transform: translateY(-1px);
+  box-shadow: 0 8px 32px rgba(201,168,76,.15);
+}
+
+/* ── CONFIDENCE RING ── */
+.confidence-ring {
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px 0;
+}
+
+.ring-wrap { position: relative; width: 120px; height: 120px; }
+
+.ring-svg { transform: rotate(-90deg); }
+
+.ring-bg { fill: none; stroke: var(--border); stroke-width: 8; }
+.ring-fill {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-dasharray: 283;
+  stroke-dashoffset: 283;
+  transition: stroke-dashoffset 1.5s cubic-bezier(.16,1,.3,1);
+}
+
+.ring-label {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.ring-pct { font-family: var(--display); font-size: 30px; color: var(--gold2); }
+.ring-sub { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: 2px; }
+
+/* ── MINI CHART ── */
+.sparkline { display: flex; align-items: flex-end; gap: 2px; height: 30px; }
+.spark-bar { flex: 1; border-radius: 2px; background: var(--border2); min-height: 2px; }
+.spark-bar.up { background: var(--green); }
+
+/* ── TABS ── */
+.tabs { display: flex; gap: 4px; margin-bottom: 18px; }
+.tab {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text3);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+}
+.tab:hover { color: var(--text2); background: var(--bg3); }
+.tab.active { background: var(--bg3); border-color: var(--border2); color: var(--text); }
+
+/* ── HORSE DETAIL MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.75);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 16px;
+  width: 560px;
+  max-height: 80vh;
+  overflow-y: auto;
+  transform: scale(.95) translateY(12px);
+  transition: transform .25s ease;
+}
+.modal-overlay.open .modal { transform: scale(1) translateY(0); }
+
+.modal-head {
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-start; justify-content: space-between;
+}
+.modal-horse { font-family: var(--serif); font-size: 22px; font-weight: 900; color: var(--text); }
+.modal-meta  { font-family: var(--mono); font-size: 11px; color: var(--text3); margin-top: 4px; }
+.modal-close { background: none; border: none; color: var(--text3); font-size: 20px; cursor: pointer; padding: 4px; transition: color .15s; }
+.modal-close:hover { color: var(--text); }
+
+.modal-body { padding: 22px 24px; }
+
+.stat-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px; margin-bottom: 20px;
+}
+.mini-stat {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+}
+.mini-stat-val { font-family: var(--display); font-size: 24px; color: var(--gold2); }
+.mini-stat-label { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: 2px; margin-top: 3px; }
+
+.history-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 50px 50px 50px 60px;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  align-items: center;
+}
+.history-row:last-child { border: none; }
+.history-row.header { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; }
+.pos-badge {
+  width: 24px; height: 24px;
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+}
+.pos-1 { background: rgba(201,168,76,.2); color: var(--gold2); }
+.pos-2 { background: rgba(255,255,255,.08); color: var(--text2); }
+.pos-3 { background: rgba(184,115,51,.2); color: #d4905a; }
+.pos-x { background: var(--bg3); color: var(--text3); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1200px) {
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .grid-2 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-word">GALOP</div>
+      <div class="logo-sub">At Yarışı Analiz Sistemi</div>
+    </div>
+
+    <div class="today-card" style="margin-top:16px;">
+      <div class="today-label">Bugün</div>
+      <div class="today-date" id="todayDate">14 Mart 2026</div>
+      <div class="today-races">🏇 3 hipodrom — 24 koşu</div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Menü</div>
+      <div class="nav-item active" onclick="setView('dashboard')">
+        <span class="icon">◈</span> Dashboard
+      </div>
+      <div class="nav-item" onclick="setView('races')">
+        <span class="icon">⬡</span> Koşu Programı
+      </div>
+      <div class="nav-item" onclick="setView('horses')">
+        <span class="icon">◉</span> At Veritabanı
+      </div>
+      <div class="nav-item" onclick="setView('analysis')">
+        <span class="icon">◈</span> Tahmin & Analiz
+      </div>
+      <div class="nav-item" onclick="setView('history')">
+        <span class="icon">▣</span> Geçmiş Sonuçlar
+      </div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-label" style="padding: 0 24px; margin-bottom: 8px;">Hipodromlar</div>
+    <div class="city-list">
+      <div class="city-item active" onclick="selectCity(this, 'İstanbul')">
+        <span class="city-name">İstanbul</span>
+        <span class="city-badge">8</span>
+      </div>
+      <div class="city-item" onclick="selectCity(this, 'İzmir')">
+        <span class="city-name">İzmir</span>
+        <span class="city-badge">9</span>
+      </div>
+      <div class="city-item" onclick="selectCity(this, 'Ankara')">
+        <span class="city-name">Ankara</span>
+        <span class="city-badge">7</span>
+      </div>
+      <div class="city-item" onclick="selectCity(this, 'Bursa')">
+        <span class="city-name">Bursa</span>
+        <span class="city-badge">0</span>
+      </div>
+      <div class="city-item" onclick="selectCity(this, 'Adana')">
+        <span class="city-name">Adana</span>
+        <span class="city-badge">0</span>
+      </div>
+      <div class="city-item" onclick="selectCity(this, 'Antalya')">
+        <span class="city-name">Antalya</span>
+        <span class="city-badge">0</span>
+      </div>
+      <div class="city-item" onclick="selectCity(this, 'Diyarbakır')">
+        <span class="city-name">Diyarbakır</span>
+        <span class="city-badge">0</span>
+      </div>
+    </div>
+
+    <div style="padding: 16px; margin-top: auto;">
+      <div style="background: rgba(74,158,255,.08); border: 1px solid rgba(74,158,255,.2); border-radius: 8px; padding: 12px; font-size: 11px; color: var(--text3);">
+        <div style="color: var(--blue); font-family: var(--mono); font-size: 9px; letter-spacing: 2px; margin-bottom: 6px;">VERİ DURUMU</div>
+        <div>🗄 730 gün geçmiş veri</div>
+        <div style="margin-top: 4px;">🕒 Son güncelleme: 09:14</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="breadcrumb">GALOP / <span id="currentCity">İstanbul</span></div>
+        <div class="live-badge">
+          <div class="live-dot"></div>
+          CANLI
+        </div>
+      </div>
+      <div class="topbar-right">
+        <select onchange="changeDateFilter(this.value)" style="background: var(--bg3); border: 1px solid var(--border2); color: var(--text2); border-radius: 8px; padding: 7px 12px; font-size: 12px; font-family: var(--sans); cursor: pointer;">
+          <option>Bugün</option>
+          <option>Yarın</option>
+          <option>Bu Hafta</option>
+        </select>
+        <button class="btn" onclick="showModal('modal1')">🔍 At Ara</button>
+        <button class="btn btn-primary" onclick="runAnalysis()">⚡ ANALİZ ET</button>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content" id="mainContent">
+
+      <!-- STATS -->
+      <div class="stats-row">
+        <div class="stat-card gold">
+          <div class="stat-label">Toplam Koşu</div>
+          <div class="stat-val">24</div>
+          <div class="stat-sub">3 hipodrom · bugün</div>
+          <div class="stat-change up">↑ +3 dün'e göre</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">İşlenen At</div>
+          <div class="stat-val">186</div>
+          <div class="stat-sub">bugünkü programda</div>
+          <div class="stat-change up">↑ veritabanında</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">Tahmin Başarısı</div>
+          <div class="stat-val">71<span style="font-size:22px">%</span></div>
+          <div class="stat-sub">son 30 günde</div>
+          <div class="stat-change up">↑ +4.2% geçen ay</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-label">Sürpriz Oran</div>
+          <div class="stat-val">18<span style="font-size:22px">%</span></div>
+          <div class="stat-sub">beklenmez kazanan</div>
+          <div class="stat-change down">↓ tarihi ortalama</div>
+        </div>
+      </div>
+
+      <!-- MAIN GRID -->
+      <div class="grid-2">
+
+        <!-- KOŞU LİSTESİ -->
+        <div class="panel" style="animation-delay:.1s">
+          <div class="panel-head">
+            <div class="panel-title">
+              Koşu Programı
+              <span class="tag" id="cityTag">İstanbul</span>
+            </div>
+            <div style="font-family: var(--mono); font-size: 11px; color: var(--text3);">14.03.2026</div>
+          </div>
+          <div class="panel-body">
+            <div class="race-list" id="raceList">
+
+              <div class="race-item selected" onclick="selectRace(this, 1)">
+                <div class="race-no">1</div>
+                <div class="race-info">
+                  <div class="race-name">Açılış Koşusu</div>
+                  <div class="race-meta">
+                    <span>🏟 Veliefendi</span>
+                    <span>📏 1200m</span>
+                    <span>🌿 Çim</span>
+                  </div>
+                </div>
+                <div class="race-time">10:30</div>
+                <div class="race-status running">CANLI</div>
+                <div class="race-horses">12 at</div>
+              </div>
+
+              <div class="race-item" onclick="selectRace(this, 2)">
+                <div class="race-no">2</div>
+                <div class="race-info">
+                  <div class="race-name">3 Yaşlı Taylar</div>
+                  <div class="race-meta">
+                    <span>🏟 Veliefendi</span>
+                    <span>📏 1400m</span>
+                    <span>🌿 Çim</span>
+                  </div>
+                </div>
+                <div class="race-time">11:05</div>
+                <div class="race-status upcoming">BEKLE</div>
+                <div class="race-horses">10 at</div>
+              </div>
+
+              <div class="race-item" onclick="selectRace(this, 3)">
+                <div class="race-no">3</div>
+                <div class="race-info">
+                  <div class="race-name">Handikap Koşusu</div>
+                  <div class="race-meta">
+                    <span>🏟 Veliefendi</span>
+                    <span>📏 1600m</span>
+                    <span>🏜 Kum</span>
+                  </div>
+                </div>
+                <div class="race-time">11:45</div>
+                <div class="race-status upcoming">BEKLE</div>
+                <div class="race-horses">14 at</div>
+              </div>
+
+              <div class="race-item" onclick="selectRace(this, 4)">
+                <div class="race-no">4</div>
+                <div class="race-info">
+                  <div class="race-name">Dişi Taylar Koşusu</div>
+                  <div class="race-meta">
+                    <span>🏟 Veliefendi</span>
+                    <span>📏 1000m</span>
+                    <span>🌿 Çim</span>
+                  </div>
+                </div>
+                <div class="race-time">12:20</div>
+                <div class="race-status upcoming">BEKLE</div>
+                <div class="race-horses">11 at</div>
+              </div>
+
+              <div class="race-item" onclick="selectRace(this, 5)">
+                <div class="race-no">5</div>
+                <div class="race-info">
+                  <div class="race-name">İngiliz Atları</div>
+                  <div class="race-meta">
+                    <span>🏟 Veliefendi</span>
+                    <span>📏 2000m</span>
+                    <span>🌿 Çim</span>
+                  </div>
+                </div>
+                <div class="race-time">13:00</div>
+                <div class="race-status upcoming">BEKLE</div>
+                <div class="race-horses">9 at</div>
+              </div>
+
+              <div class="race-item" onclick="selectRace(this, 6)">
+                <div class="race-no">6</div>
+                <div class="race-info">
+                  <div class="race-name">Arap Atları Koşusu</div>
+                  <div class="race-meta">
+                    <span>🏟 Veliefendi</span>
+                    <span>📏 1800m</span>
+                    <span>🏜 Kum</span>
+                  </div>
+                </div>
+                <div class="race-time">13:40</div>
+                <div class="race-status upcoming">BEKLE</div>
+                <div class="race-horses">13 at</div>
+              </div>
+
+              <div class="race-item" onclick="selectRace(this, 7)">
+                <div class="race-no">7</div>
+                <div class="race-info">
+                  <div class="race-name">Grup Koşusu — Final</div>
+                  <div class="race-meta">
+                    <span>🏟 Veliefendi</span>
+                    <span>📏 1600m</span>
+                    <span>🌿 Çim</span>
+                  </div>
+                </div>
+                <div class="race-time">14:20</div>
+                <div class="race-status upcoming">BEKLE</div>
+                <div class="race-horses">10 at</div>
+              </div>
+
+              <div class="race-item" onclick="selectRace(this, 8)">
+                <div class="race-no">8</div>
+                <div class="race-info">
+                  <div class="race-name">Kapanış Koşusu</div>
+                  <div class="race-meta">
+                    <span>🏟 Veliefendi</span>
+                    <span>📏 1200m</span>
+                    <span>🏜 Kum</span>
+                  </div>
+                </div>
+                <div class="race-time">15:00</div>
+                <div class="race-status upcoming">BEKLE</div>
+                <div class="race-horses">12 at</div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- TAHMİN PANELİ -->
+        <div class="pred-panel">
+          <div class="pred-head">
+            <div class="pred-title">
+              ⚡ Tahmin — <span id="selectedRaceTitle">1. Koşu</span>
+            </div>
+            <div style="display:flex; gap: 8px; align-items:center;">
+              <div style="font-family: var(--mono); font-size: 10px; color: var(--text3);">GÜVEN</div>
+              <div style="font-family: var(--display); font-size: 20px; color: var(--gold);">%74</div>
+            </div>
+          </div>
+          <div class="pred-body">
+
+            <div class="tabs">
+              <button class="tab active" onclick="switchTab(this,'pred')">Tahminler</button>
+              <button class="tab" onclick="switchTab(this,'horses')">Atlar</button>
+              <button class="tab" onclick="switchTab(this,'odds')">Ganyan</button>
+              <button class="tab" onclick="switchTab(this,'math')">Analiz</button>
+            </div>
+
+            <!-- TAB: TAHMİNLER -->
+            <div id="tab-pred">
+              <div class="section-label">Sıralama Tahmini</div>
+              <div class="pred-list">
+
+                <div class="pred-item top">
+                  <div class="pred-rank r1">1</div>
+                  <div>
+                    <div class="pred-name">KARAKIR</div>
+                    <div class="pred-reason">HP:92 · son 3: 1-1-2 · Çim:+18%</div>
+                  </div>
+                  <div class="prob-bar-wrap">
+                    <div class="prob-label">%38</div>
+                    <div class="prob-bar"><div class="prob-fill" style="width:38%"></div></div>
+                  </div>
+                  <div class="pred-odds">3.40</div>
+                </div>
+
+                <div class="pred-item">
+                  <div class="pred-rank r2">2</div>
+                  <div>
+                    <div class="pred-name">ALTINAY</div>
+                    <div class="pred-reason">HP:88 · son 3: 2-1-3 · 1200m:+12%</div>
+                  </div>
+                  <div class="prob-bar-wrap">
+                    <div class="prob-label">%26</div>
+                    <div class="prob-bar"><div class="prob-fill" style="width:26%"></div></div>
+                  </div>
+                  <div class="pred-odds">5.10</div>
+                </div>
+
+                <div class="pred-item">
+                  <div class="pred-rank r3">3</div>
+                  <div>
+                    <div class="pred-name">MAVI YILDIZ</div>
+                    <div class="pred-reason">HP:85 · Jokey uyumu: yüksek</div>
+                  </div>
+                  <div class="prob-bar-wrap">
+                    <div class="prob-label">%19</div>
+                    <div class="prob-bar"><div class="prob-fill" style="width:19%"></div></div>
+                  </div>
+                  <div class="pred-odds">7.80</div>
+                </div>
+
+              </div>
+
+              <!-- SURPRISE -->
+              <div class="surprise-box">
+                <div class="surprise-header">
+                  ◈ SÜRPRİZ SEÇENEK
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between">
+                  <div class="surprise-horse">FIRTINA GÜLÜ</div>
+                  <div class="surprise-odds">× 24.0</div>
+                </div>
+                <div class="surprise-reason">
+                  Son 3 koşuda kötü görünse de, bu mesafe ve pist kombinasyonunda tarihi başarı oranı %31. Jokey değişimi pozitif sinyal. Ağırlık 2kg düşürüldü. Uzun vadeli istatistik sapması hesaba katıldığında beklenen değer pozitif.
+                </div>
+              </div>
+
+              <!-- CONFIDENCE RING -->
+              <div style="display:flex; align-items:center; gap: 20px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
+                <div class="ring-wrap">
+                  <svg class="ring-svg" width="120" height="120" viewBox="0 0 120 120">
+                    <circle class="ring-bg" cx="60" cy="60" r="45"/>
+                    <circle class="ring-fill" id="confRing" cx="60" cy="60" r="45"/>
+                  </svg>
+                  <div class="ring-label">
+                    <div class="ring-pct">74%</div>
+                    <div class="ring-sub">GÜVEN</div>
+                  </div>
+                </div>
+                <div style="flex:1">
+                  <div class="math-title">Algoritma Faktörleri</div>
+                  <div class="math-chips">
+                    <div class="math-chip active">Bayesian</div>
+                    <div class="math-chip active">ELO Rating</div>
+                    <div class="math-chip active">Form Eğrisi</div>
+                    <div class="math-chip">Markov Chain</div>
+                    <div class="math-chip active">Pist Uyumu</div>
+                    <div class="math-chip">Monte Carlo</div>
+                    <div class="math-chip active">Jokey Faktörü</div>
+                    <div class="math-chip active">HP Normalizasyon</div>
+                  </div>
+                </div>
+              </div>
+
+              <button class="analyse-btn" onclick="runAnalysis()">
+                ⚡ TAM ANALİZ ÇALIŞTIR
+              </button>
+            </div>
+
+            <!-- TAB: ATLAR -->
+            <div id="tab-horses" style="display:none">
+              <table class="horse-table">
+                <thead>
+                  <tr>
+                    <th>No</th>
+                    <th>At</th>
+                    <th>Yaş</th>
+                    <th>Jokey</th>
+                    <th>Kilo</th>
+                    <th>Son 6</th>
+                    <th>KGS</th>
+                    <th>HP</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="highlight" onclick="showHorseModal('KARAKIR')">
+                    <td><div class="horse-no">1</div></td>
+                    <td><div class="horse-name">KARAKIR</div><div class="horse-detail">D.2021 · Dikili × Karanlık</div></td>
+                    <td><span style="font-family:var(--mono)">4</span></td>
+                    <td>A. Serdar</td>
+                    <td><span style="font-family:var(--mono)">57.0</span></td>
+                    <td><div class="last6"><span class="l6-dot l6-1">1</span><span class="l6-dot l6-1">1</span><span class="l6-dot l6-2">2</span><span class="l6-dot l6-3">3</span><span class="l6-dot l6-1">1</span><span class="l6-dot l6-2">2</span></div></td>
+                    <td><span style="font-family:var(--mono);color:var(--green)">14</span></td>
+                    <td><span style="font-family:var(--mono);color:var(--gold)">92</span></td>
+                  </tr>
+                  <tr onclick="showHorseModal('ALTINAY')">
+                    <td><div class="horse-no">2</div></td>
+                    <td><div class="horse-name">ALTINAY</div><div class="horse-detail">D.2020 · Rüzgar × Altın</div></td>
+                    <td><span style="font-family:var(--mono)">5</span></td>
+                    <td>M. Çelik</td>
+                    <td><span style="font-family:var(--mono)">55.5</span></td>
+                    <td><div class="last6"><span class="l6-dot l6-2">2</span><span class="l6-dot l6-1">1</span><span class="l6-dot l6-3">3</span><span class="l6-dot l6-2">2</span><span class="l6-dot l6-3">3</span><span class="l6-dot l6-1">1</span></div></td>
+                    <td><span style="font-family:var(--mono);color:var(--text2)">21</span></td>
+                    <td><span style="font-family:var(--mono);color:var(--gold)">88</span></td>
+                  </tr>
+                  <tr onclick="showHorseModal('MAVİ YILDIZ')">
+                    <td><div class="horse-no">3</div></td>
+                    <td><div class="horse-name">MAVİ YILDIZ</div><div class="horse-detail">D.2021 · Tornado × Mavi</div></td>
+                    <td><span style="font-family:var(--mono)">4</span></td>
+                    <td>K. Yıldız</td>
+                    <td><span style="font-family:var(--mono)">56.0</span></td>
+                    <td><div class="last6"><span class="l6-dot l6-3">3</span><span class="l6-dot l6-2">2</span><span class="l6-dot l6-1">1</span><span class="l6-dot l6-3">3</span><span class="l6-dot l6-2">2</span><span class="l6-dot l6-x">5</span></div></td>
+                    <td><span style="font-family:var(--mono);color:var(--text2)">7</span></td>
+                    <td><span style="font-family:var(--mono);color:var(--text2)">85</span></td>
+                  </tr>
+                  <tr onclick="showHorseModal('FIRTINA GÜLÜ')">
+                    <td><div class="horse-no">4</div></td>
+                    <td><div class="horse-name">FIRTINA GÜLÜ</div><div class="horse-detail">D.2020 · Fırtına × Gül</div></td>
+                    <td><span style="font-family:var(--mono)">5</span></td>
+                    <td>H. Demir</td>
+                    <td><span style="font-family:var(--mono)">54.0</span></td>
+                    <td><div class="last6"><span class="l6-dot l6-f">8</span><span class="l6-dot l6-f">7</span><span class="l6-dot l6-x">4</span><span class="l6-dot l6-1">1</span><span class="l6-dot l6-f">6</span><span class="l6-dot l6-x">5</span></div></td>
+                    <td><span style="font-family:var(--mono);color:var(--red)">42</span></td>
+                    <td><span style="font-family:var(--mono);color:var(--text3)">71</span></td>
+                  </tr>
+                  <tr onclick="showHorseModal('SAMANYOLU')">
+                    <td><div class="horse-no">5</div></td>
+                    <td><div class="horse-name">SAMANYOLU</div><div class="horse-detail">D.2022 · Star × Yol</div></td>
+                    <td><span style="font-family:var(--mono)">3</span></td>
+                    <td>B. Kaya</td>
+                    <td><span style="font-family:var(--mono)">54.0</span></td>
+                    <td><div class="last6"><span class="l6-dot l6-2">2</span><span class="l6-dot l6-3">3</span><span class="l6-dot l6-2">2</span><span class="l6-dot l6-1">1</span><span class="l6-dot l6-2">2</span><span class="l6-dot l6-3">3</span></div></td>
+                    <td><span style="font-family:var(--mono);color:var(--text2)">18</span></td>
+                    <td><span style="font-family:var(--mono);color:var(--text2)">82</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- TAB: GANYAN -->
+            <div id="tab-odds" style="display:none">
+              <div class="section-label">Canlı Oran Haritası</div>
+              <div class="odds-grid">
+                <div class="odds-cell hot" onclick="">
+                  <div class="odds-horse">KARAKIR</div>
+                  <div class="odds-val">3.40</div>
+                  <div class="odds-change down">▼ 0.80</div>
+                </div>
+                <div class="odds-cell">
+                  <div class="odds-horse">ALTINAY</div>
+                  <div class="odds-val">5.10</div>
+                  <div class="odds-change up">▲ 0.30</div>
+                </div>
+                <div class="odds-cell">
+                  <div class="odds-horse">MAVİ Y.</div>
+                  <div class="odds-val">7.80</div>
+                  <div class="odds-change">—</div>
+                </div>
+                <div class="odds-cell">
+                  <div class="odds-horse">FIRTINA</div>
+                  <div class="odds-val">24.0</div>
+                  <div class="odds-change down">▼ 4.00</div>
+                </div>
+                <div class="odds-cell">
+                  <div class="odds-horse">SAMANY.</div>
+                  <div class="odds-val">9.50</div>
+                  <div class="odds-change up">▲ 1.20</div>
+                </div>
+                <div class="odds-cell">
+                  <div class="odds-horse">DAĞHAN</div>
+                  <div class="odds-val">12.5</div>
+                  <div class="odds-change">—</div>
+                </div>
+              </div>
+              <div class="section-label" style="margin-top:20px">Oran Hareketleri</div>
+              <div style="display:flex; gap: 12px; align-items: flex-end; height: 80px; padding: 0 4px;">
+                <div style="flex:1; display:flex; flex-direction:column; gap:4px; align-items:center;">
+                  <div style="flex:1; width:100%; background: rgba(201,168,76,.3); border-radius:3px 3px 0 0;"></div>
+                  <div style="font-family:var(--mono); font-size:9px; color:var(--text3)">9:00</div>
+                </div>
+                <div style="flex:1; display:flex; flex-direction:column; gap:4px; align-items:center;">
+                  <div style="flex:.7; width:100%; background: rgba(201,168,76,.4); border-radius:3px 3px 0 0;"></div>
+                  <div style="font-family:var(--mono); font-size:9px; color:var(--text3)">9:30</div>
+                </div>
+                <div style="flex:1; display:flex; flex-direction:column; gap:4px; align-items:center;">
+                  <div style="flex:.9; width:100%; background: rgba(201,168,76,.5); border-radius:3px 3px 0 0;"></div>
+                  <div style="font-family:var(--mono); font-size:9px; color:var(--text3)">10:00</div>
+                </div>
+                <div style="flex:1; display:flex; flex-direction:column; gap:4px; align-items:center;">
+                  <div style="flex:.5; width:100%; background: rgba(201,168,76,.7); border-radius:3px 3px 0 0;"></div>
+                  <div style="font-family:var(--mono); font-size:9px; color:var(--text3)">10:15</div>
+                </div>
+                <div style="flex:1; display:flex; flex-direction:column; gap:4px; align-items:center;">
+                  <div style="flex:.35; width:100%; background: var(--gold); border-radius:3px 3px 0 0;"></div>
+                  <div style="font-family:var(--mono); font-size:9px; color:var(--gold)">ŞİMDİ</div>
+                </div>
+              </div>
+              <div style="font-size: 11px; color: var(--text3); margin-top: 8px; font-family: var(--mono);">
+                ⚡ KARAKIR için ani oran düşüşü — insider aktivitesi olası
+              </div>
+            </div>
+
+            <!-- TAB: ANALİZ -->
+            <div id="tab-math" style="display:none">
+              <div class="section-label">Matematiksel Modeller</div>
+
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">
+                <div style="background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:14px;">
+                  <div style="font-family:var(--mono); font-size:9px; color:var(--blue); letter-spacing:2px; margin-bottom:8px;">BAYESIAN SKORU</div>
+                  <div style="font-family:var(--display); font-size:32px; color:var(--blue)">0.847</div>
+                  <div style="font-size:11px; color:var(--text3); margin-top:4px;">Prior: son 20 koşu ortalaması</div>
+                </div>
+                <div style="background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:14px;">
+                  <div style="font-family:var(--mono); font-size:9px; color:var(--purple); letter-spacing:2px; margin-bottom:8px;">ELO RATING</div>
+                  <div style="font-family:var(--display); font-size:32px; color:var(--purple)">1842</div>
+                  <div style="font-size:11px; color:var(--text3); margin-top:4px;">Sınıf ortalaması: 1650</div>
+                </div>
+              </div>
+
+              <div style="background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:12px;">
+                <div style="font-family:var(--mono); font-size:9px; color:var(--text3); letter-spacing:2px; margin-bottom:10px;">PIST × MESAFE PERFORMANS MATRİSİ — KARAKIR</div>
+                <div style="display:grid; grid-template-columns: 60px repeat(4,1fr); gap:4px; font-family:var(--mono); font-size:10px;">
+                  <div style="color:var(--text3)"></div>
+                  <div style="color:var(--text3); text-align:center">1000m</div>
+                  <div style="color:var(--text3); text-align:center">1200m</div>
+                  <div style="color:var(--text3); text-align:center">1400m</div>
+                  <div style="color:var(--text3); text-align:center">1600m</div>
+
+                  <div style="color:var(--text3)">Çim</div>
+                  <div style="background:rgba(63,200,138,.15); color:var(--green); text-align:center; border-radius:4px; padding:4px">%62</div>
+                  <div style="background:rgba(201,168,76,.25); color:var(--gold); text-align:center; border-radius:4px; padding:4px">%78</div>
+                  <div style="background:rgba(63,200,138,.1); color:var(--green); text-align:center; border-radius:4px; padding:4px">%55</div>
+                  <div style="background:rgba(255,255,255,.05); color:var(--text3); text-align:center; border-radius:4px; padding:4px">%31</div>
+
+                  <div style="color:var(--text3)">Kum</div>
+                  <div style="background:rgba(255,255,255,.05); color:var(--text3); text-align:center; border-radius:4px; padding:4px">%44</div>
+                  <div style="background:rgba(63,200,138,.1); color:var(--green); text-align:center; border-radius:4px; padding:4px">%58</div>
+                  <div style="background:rgba(255,255,255,.05); color:var(--text3); text-align:center; border-radius:4px; padding:4px">%41</div>
+                  <div style="background:rgba(224,82,82,.1); color:var(--red); text-align:center; border-radius:4px; padding:4px">%22</div>
+                </div>
+              </div>
+
+              <div style="font-size:11px; line-height:1.7; color:var(--text2); background:rgba(201,168,76,.05); border:1px solid rgba(201,168,76,.15); border-radius:8px; padding:14px;">
+                <strong style="color:var(--gold2); font-family:var(--mono); font-size:10px; letter-spacing:2px;">ANALİST NOTU</strong><br>
+                KARAKIR bu kombinasyon için optimal koşullarda. Çim + 1200m matrisi %78 başarı oranı gösteriyor. 14 günlük dinlenme periyodu form kaybını öngörmüyor. Jokey A. Serdar ile 7 koşuda 5 derece. <span style="color:var(--gold)">Yüksek güven önerisi.</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </main>
+</div>
+
+<!-- ── HORSE MODAL ── -->
+<div class="modal-overlay" id="horseModal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="modal-horse" id="modalHorseName">KARAKIR</div>
+        <div class="modal-meta" id="modalHorseMeta">4 Yaş · Dişi · Veliefendi</div>
+      </div>
+      <button class="modal-close" onclick="document.getElementById('horseModal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="stat-grid">
+        <div class="mini-stat">
+          <div class="mini-stat-val">92</div>
+          <div class="mini-stat-label">Handikap</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-val" style="color:var(--green)">68%</div>
+          <div class="mini-stat-label">Derece Oranı</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-val" style="color:var(--blue)">1842</div>
+          <div class="mini-stat-label">ELO Rating</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-val">14</div>
+          <div class="mini-stat-label">KGS</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-val" style="color:var(--gold)">31%</div>
+          <div class="mini-stat-label">Kazanma</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-val">57</div>
+          <div class="mini-stat-label">Kilo (kg)</div>
+        </div>
+      </div>
+
+      <div style="font-family:var(--mono); font-size:10px; letter-spacing:2px; color:var(--text3); margin-bottom:10px;">GEÇMİŞ KOŞULAR</div>
+      <div class="history-row header">
+        <div>Tarih</div><div>Koşu</div><div>Pist</div><div>Mes.</div><div>Sıra</div><div>Ganyan</div>
+      </div>
+      <div class="history-row">
+        <div style="font-family:var(--mono); font-size:11px; color:var(--text3)">28.02.26</div>
+        <div>3. Açılış Koşusu</div>
+        <div>Çim</div>
+        <div>1200m</div>
+        <div><div class="pos-badge pos-1">1</div></div>
+        <div style="font-family:var(--mono); color:var(--gold)">3.80</div>
+      </div>
+      <div class="history-row">
+        <div style="font-family:var(--mono); font-size:11px; color:var(--text3)">14.02.26</div>
+        <div>7. Handikap</div>
+        <div>Çim</div>
+        <div>1400m</div>
+        <div><div class="pos-badge pos-1">1</div></div>
+        <div style="font-family:var(--mono); color:var(--gold)">4.20</div>
+      </div>
+      <div class="history-row">
+        <div style="font-family:var(--mono); font-size:11px; color:var(--text3)">01.02.26</div>
+        <div>2. Grup Koşusu</div>
+        <div>Kum</div>
+        <div>1200m</div>
+        <div><div class="pos-badge pos-2">2</div></div>
+        <div style="font-family:var(--mono); color:var(--text2)">5.60</div>
+      </div>
+      <div class="history-row">
+        <div style="font-family:var(--mono); font-size:11px; color:var(--text3)">18.01.26</div>
+        <div>5. Taylar Koşusu</div>
+        <div>Çim</div>
+        <div>1000m</div>
+        <div><div class="pos-badge pos-3">3</div></div>
+        <div style="font-family:var(--mono); color:var(--text2)">8.10</div>
+      </div>
+      <div class="history-row">
+        <div style="font-family:var(--mono); font-size:11px; color:var(--text3)">04.01.26</div>
+        <div>1. Açılış</div>
+        <div>Çim</div>
+        <div>1200m</div>
+        <div><div class="pos-badge pos-1">1</div></div>
+        <div style="font-family:var(--mono); color:var(--gold)">3.40</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// GALOP — API Entegrasyonu
+// Backend: http://localhost:8000
+// ══════════════════════════════════════════════
+
+const API = window.location.hostname === "localhost" 
+  ? "http://localhost:8000/api"
+  : "/api";  // Railway: aynı origin
+
+// ── Tarih ──
+const now = new Date();
+const opts = { day: 'numeric', month: 'long', year: 'numeric' };
+document.getElementById('todayDate').textContent = now.toLocaleDateString('tr-TR', opts);
+
+// ── API helpers ──
+async function apiFetch(path) {
+  try {
+    const r = await fetch(API + path);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  } catch(e) {
+    console.warn("API hatası:", e.message, "— Demo verisi kullanılıyor");
+    return null;
+  }
+}
+
+// ── Durum göstergesi ──
+function setStatus(msg, type = "info") {
+  const colors = { info: "var(--blue)", ok: "var(--green)", error: "var(--red)", warn: "var(--gold)" };
+  console.log(`[GALOP] ${msg}`);
+}
+
+// ── Koşu listesini API'dan yükle ──
+async function loadTodayRaces(city = null) {
+  const path = city
+    ? `/races/today?city=${encodeURIComponent(city)}`
+    : `/races/today`;
+
+  const data = await apiFetch(path);
+  if (!data || !data.length) {
+    setStatus("API'dan veri yüklenemedi — demo gösterimi aktif", "warn");
+    return;
+  }
+
+  renderRaceList(data);
+  updateCityBadges(data);
+}
+
+function renderRaceList(races) {
+  const list = document.getElementById("raceList");
+  if (!list || !races.length) return;
+
+  list.innerHTML = races.map((r, i) => `
+    <div class="race-item ${i===0?'selected':''}" onclick="selectRaceFromAPI(this, ${r.id}, ${r.race_no})">
+      <div class="race-no">${r.race_no}</div>
+      <div class="race-info">
+        <div class="race-name">${r.race_name || r.race_no + '. Koşu'}</div>
+        <div class="race-meta">
+          <span>🏟 ${r.city}</span>
+          <span>📏 ${r.distance_m || '?'}m</span>
+          <span>${r.track === 'Çim' ? '🌿' : '🏜'} ${r.track || '?'}</span>
+        </div>
+      </div>
+      <div class="race-time">${r.start_time || '--:--'}</div>
+      <div class="race-status upcoming">BEKLE</div>
+      <div class="race-horses">${r.horse_count} at</div>
+    </div>
+  `).join("");
+
+  // İlk koşuyu seç
+  if (races.length > 0) {
+    selectRaceFromAPI(list.firstElementChild, races[0].id, races[0].race_no);
+  }
+}
+
+function updateCityBadges(races) {
+  // Şehir başına koşu sayısını güncelle
+  const counts = {};
+  races.forEach(r => { counts[r.city] = (counts[r.city]||0)+1; });
+  document.querySelectorAll('.city-item').forEach(el => {
+    const name = el.querySelector('.city-name')?.textContent;
+    const badge = el.querySelector('.city-badge');
+    if (badge && counts[name] !== undefined) {
+      badge.textContent = counts[name];
+    }
+  });
+}
+
+// ── API'dan koşu seç ve tahmin yükle ──
+async function selectRaceFromAPI(el, raceId, raceNo) {
+  document.querySelectorAll('.race-item').forEach(r => r.classList.remove('selected'));
+  if (el) el.classList.add('selected');
+  document.getElementById('selectedRaceTitle').textContent = raceNo + '. Koşu';
+
+  // Paralel: at listesi + tahmin
+  const [horsesData, predData] = await Promise.all([
+    apiFetch(`/races/${raceId}/horses`),
+    apiFetch(`/predictions/${raceId}`)
+  ]);
+
+  if (horsesData) renderHorseTable(horsesData.horses);
+  if (predData)   renderPredictions(predData);
+}
+
+function renderHorseTable(horses) {
+  const tbody = document.querySelector('#tab-horses tbody');
+  if (!tbody || !horses) return;
+
+  tbody.innerHTML = horses.map(h => {
+    const last6 = renderLast6(h.last_6_races);
+    return `
+      <tr onclick="showHorseModal('${h.horse_name}')">
+        <td><div class="horse-no">${h.start_no}</div></td>
+        <td>
+          <div class="horse-name">${h.horse_name}</div>
+          <div class="horse-detail">${h.sire || '?'} × ${h.dam || '?'}</div>
+        </td>
+        <td><span style="font-family:var(--mono)">${h.age || '?'}</span></td>
+        <td>${h.jockey || '—'}</td>
+        <td><span style="font-family:var(--mono)">${h.weight_kg || '—'}</span></td>
+        <td><div class="last6">${last6}</div></td>
+        <td><span style="font-family:var(--mono);color:${kgsColor(h.kgs)}">${h.kgs ?? '—'}</span></td>
+        <td><span style="font-family:var(--mono);color:${hpColor(h.handicap_pts)}">${h.handicap_pts ?? '—'}</span></td>
+      </tr>`;
+  }).join("");
+}
+
+function renderLast6(str) {
+  if (!str) return '<span style="color:var(--text3)">—</span>';
+  return str.split(/[-,]/).slice(0,6).map(p => {
+    const n = parseInt(p);
+    const cls = n===1?'l6-1':n===2?'l6-2':n===3?'l6-3':n>6?'l6-f':'l6-x';
+    return `<span class="l6-dot ${cls}">${p}</span>`;
+  }).join("");
+}
+
+function kgsColor(v) {
+  if (!v) return 'var(--text3)';
+  if (v <= 14) return 'var(--green)';
+  if (v <= 30) return 'var(--text2)';
+  return 'var(--red)';
+}
+
+function hpColor(v) {
+  if (!v) return 'var(--text3)';
+  if (v >= 90) return 'var(--gold)';
+  if (v >= 80) return 'var(--text2)';
+  return 'var(--text3)';
+}
+
+function renderPredictions(data) {
+  if (!data.predictions) return;
+
+  // Güven halkasını güncelle
+  const conf = data.confidence_pct || 70;
+  const ring = document.getElementById('confRing');
+  if (ring) {
+    ring.style.strokeDashoffset = 283 - (283 * conf / 100);
+  }
+  const ringPct = document.querySelector('.ring-pct');
+  if (ringPct) ringPct.textContent = conf + '%';
+
+  // Tahmin listesi
+  const predList = document.querySelector('.pred-list');
+  if (predList) {
+    const top3 = data.predictions.slice(0, 3);
+    const rankColors = ['r1','r2','r3'];
+    predList.innerHTML = top3.map((h, i) => `
+      <div class="pred-item ${i===0?'top':''}">
+        <div class="pred-rank ${rankColors[i]}">${i+1}</div>
+        <div>
+          <div class="pred-name">${h.horse_name}</div>
+          <div class="pred-reason">HP:${h.handicap_pts??'?'} · Son6: ${h.last_6_races||'?'} · ${h.jockey||'?'}</div>
+        </div>
+        <div class="prob-bar-wrap">
+          <div class="prob-label">%${h.win_probability}</div>
+          <div class="prob-bar"><div class="prob-fill" style="width:${h.win_probability}%"></div></div>
+        </div>
+        <div class="pred-odds">${h.ganyan_odds?.toFixed(2) ?? '—'}</div>
+      </div>
+    `).join("");
+  }
+
+  // Sürpriz
+  if (data.surprise) {
+    const sb = document.querySelector('.surprise-horse');
+    const so = document.querySelector('.surprise-odds');
+    const sr = document.querySelector('.surprise-reason');
+    if (sb) sb.textContent = data.surprise.horse_name;
+    if (so) so.textContent = `× ${data.surprise.ganyan_odds?.toFixed(1) ?? '?'}`;
+    if (sr) sr.textContent = data.surprise.reason;
+  }
+}
+
+// ── At profili API'dan yükle ──
+async function showHorseModalAPI(name) {
+  document.getElementById('modalHorseName').textContent = name;
+  document.getElementById('modalHorseMeta').textContent = 'Yükleniyor...';
+  document.getElementById('horseModal').classList.add('open');
+
+  const data = await apiFetch(`/horses/${encodeURIComponent(name)}/profile`);
+  if (!data || data.error) return;
+
+  document.getElementById('modalHorseMeta').textContent =
+    `${data.birth_year ? 2026 - data.birth_year + ' Yaş' : ''} · ${data.gender || ''} · Toplam ${data.total_races} koşu`;
+
+  // Mini statlar
+  const statVals = document.querySelectorAll('.mini-stat-val');
+  if (statVals.length >= 6) {
+    const hp = data.recent_races?.[0]?.handicap_pts ?? '—';
+    statVals[0].textContent = hp;
+    statVals[1].textContent = data.win_rate + '%';
+    statVals[2].textContent = data.total_races;
+    statVals[3].textContent = data.recent_races?.[0]?.kgs ?? '—';
+    statVals[4].textContent = (data.win_rate) + '%';
+    statVals[5].textContent = data.recent_races?.[0]?.weight_kg ?? '—';
+  }
+
+  // Geçmiş koşular
+  const histArea = document.querySelector('.modal-body .history-row.header');
+  if (histArea && data.recent_races) {
+    let html = '';
+    data.recent_races.slice(0, 8).forEach(r => {
+      const posCls = r.finish_pos===1?'pos-1':r.finish_pos===2?'pos-2':r.finish_pos===3?'pos-3':'pos-x';
+      html += `
+        <div class="history-row">
+          <div style="font-family:var(--mono);font-size:11px;color:var(--text3)">${r.date}</div>
+          <div>${r.race_name || r.city}</div>
+          <div>${r.track || '—'}</div>
+          <div>${r.distance_m || '—'}</div>
+          <div><div class="pos-badge ${posCls}">${r.finish_pos ?? '?'}</div></div>
+          <div style="font-family:var(--mono);color:var(--gold)">${r.ganyan_odds?.toFixed(2) ?? '—'}</div>
+        </div>`;
+    });
+    histArea.insertAdjacentHTML('afterend', html);
+  }
+}
+
+// ── Scraper durumu ──
+async function checkScraperStatus() {
+  const data = await apiFetch('/scraper/status');
+  if (!data) return;
+
+  const db = data.db;
+  const statusEl = document.querySelector('[style*="VERİ DURUMU"] + div') ||
+                   document.querySelector('.sidebar > div:last-child div:nth-child(2)');
+
+  // Veri durumu güncelle
+  const infoBox = document.querySelector('.sidebar > div:last-child');
+  if (infoBox && db) {
+    const lines = infoBox.querySelectorAll('div');
+    if (lines[1]) lines[1].textContent = `🗄 ${db.total_races?.toLocaleString('tr')} koşu verisi`;
+    if (lines[2]) lines[2].textContent = `📅 ${db.date_range?.from || '?'} → ${db.date_range?.to || '?'}`;
+  }
+}
+
+// ── Scraper tetikle ──
+async function triggerScrape(fromDate, toDate) {
+  const res = await apiFetch(`/scraper/run?from_date=${fromDate}&to_date=${toDate}`);
+  if (res) alert(`Scraper başlatıldı: ${res.from} → ${res.to}`);
+}
+
+// ── İlk yükleme ──
+window.addEventListener('DOMContentLoaded', async () => {
+  await Promise.all([
+    loadTodayRaces(),
+    checkScraperStatus(),
+  ]);
+});
+
+// Her 60 saniyede durum güncelle
+setInterval(checkScraperStatus, 60000);
+
+// ── Ring animasyon ──
+setTimeout(() => {
+  const ring = document.getElementById('confRing');
+  if(ring) {
+    const pct = 0.74;
+    ring.style.strokeDashoffset = 283 - (283 * pct);
+  }
+}, 500);
+
+// ── Prob bar animasyon ──
+setTimeout(() => {
+  document.querySelectorAll('.prob-fill').forEach(el => {
+    const w = el.style.width;
+    el.style.width = '0%';
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => { el.style.width = w; });
+    });
+  });
+}, 300);
+
+// ── Şehir seç ──
+function selectCity(el, name) {
+  document.querySelectorAll('.city-item').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('currentCity').textContent = name;
+  document.getElementById('cityTag').textContent = name;
+}
+
+// ── Koşu seç ──
+function selectRace(el, no) {
+  document.querySelectorAll('.race-item').forEach(r => r.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('selectedRaceTitle').textContent = no + '. Koşu';
+  // ring reset
+  const ring = document.getElementById('confRing');
+  const pcts = [0.74, 0.68, 0.81, 0.59, 0.77, 0.65, 0.88, 0.72];
+  const pct = pcts[(no-1) % pcts.length];
+  ring.style.strokeDashoffset = 283 - (283 * pct);
+  document.querySelector('.ring-pct').textContent = Math.round(pct*100) + '%';
+}
+
+// ── Tab switch ──
+function switchTab(btn, id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  ['pred','horses','odds','math'].forEach(t => {
+    const el = document.getElementById('tab-'+t);
+    if(el) el.style.display = (t === id) ? 'block' : 'none';
+  });
+}
+
+// ── Modal ──
+function showHorseModal(name) {
+  // Modal'daki eski history satırlarını temizle
+  document.querySelectorAll('.history-row:not(.header)').forEach(el => el.remove());
+  showHorseModalAPI(name);
+}
+
+function closeModal(e) {
+  if(e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+}
+
+// ── Analiz butonu ──
+function runAnalysis() {
+  const btn = document.querySelector('.analyse-btn');
+  if(!btn) return;
+  btn.textContent = '⟳ ANALİZ YAPILIYOR...';
+  btn.style.opacity = '.7';
+  btn.style.cursor = 'default';
+  setTimeout(() => {
+    btn.textContent = '✓ ANALİZ TAMAMLANDI';
+    btn.style.background = 'linear-gradient(135deg, rgba(63,200,138,.2), rgba(63,200,138,.05))';
+    btn.style.borderColor = 'rgba(63,200,138,.35)';
+    btn.style.color = 'var(--green)';
+    // ring güncelle
+    const ring = document.getElementById('confRing');
+    ring.style.stroke = 'var(--green)';
+    ring.style.strokeDashoffset = 283 - (283 * 0.81);
+    document.querySelector('.ring-pct').textContent = '81%';
+    setTimeout(() => {
+      btn.textContent = '⚡ TAM ANALİZ ÇALIŞTIR';
+      btn.style = '';
+      ring.style.stroke = 'var(--gold)';
+      ring.style.strokeDashoffset = 283 - (283 * 0.74);
+      document.querySelector('.ring-pct').textContent = '74%';
+    }, 3000);
+  }, 1800);
+}
+
+// ── Canlı oran güncelleme simülasyonu ──
+setInterval(() => {
+  const vals = document.querySelectorAll('.odds-val');
+  if(vals.length > 0) {
+    const idx = Math.floor(Math.random() * vals.length);
+    const curr = parseFloat(vals[idx].textContent);
+    const delta = (Math.random() - 0.5) * 0.3;
+    const newVal = Math.max(1.1, curr + delta).toFixed(2);
+    vals[idx].textContent = newVal;
+  }
+}, 3500);
+</script>
+
+</body>
+</html>
