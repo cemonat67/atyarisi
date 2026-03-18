@@ -6,3 +6,4 @@ beautifulsoup4==4.12.3
 python-multipart==0.0.9
 playwright==1.44.0
 apscheduler==3.10.4
+anthropic>=0.85.0
